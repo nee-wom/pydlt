@@ -275,6 +275,7 @@ class MessageTypeInfo(IntEnum):
 class MessageLogInfo(MessageTypeInfo):
     """A definition of Message Log Info in DLT Extended Header."""
 
+    DLT_LOG_OFF = 0x0
     DLT_LOG_FATAL = 0x1
     DLT_LOG_ERROR = 0x2
     DLT_LOG_WARN = 0x3

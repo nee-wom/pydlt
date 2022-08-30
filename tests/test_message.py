@@ -23,6 +23,7 @@ from pydlt import (
     DltMessage,
     MessageBusInfo,
     MessageLogInfo,
+    MessageControlInfo,
     MessageType,
     StorageHeader,
 )
@@ -500,6 +501,79 @@ def _make_verbose_payload_message(
         "Ctx",
         msb_first=msbf,
         str_header=StorageHeader(0, 0, "ECU"),
+    )
+
+
+def test_control_message_request():
+    service_id = 42
+    msg = DltMessage.create_control_message(service_id, "E1")
+    copy = DltMessage.create_from_bytes(msg.to_bytes(), False)
+    assert msg == copy
+    assert str(msg) == f"0 E1   control request non-verbose [{service_id}]"
+
+
+def test_control_message_request_param():
+    service_id = 42
+    arg = b"Foo"
+    msg = DltMessage.create_control_message(service_id, "ECU", arg)
+    copy = DltMessage.create_from_bytes(msg.to_bytes(), False)
+    assert msg == copy
+    assert str(msg) == f"0 ECU   control request non-verbose [{service_id}] {arg.hex()}"
+
+
+def test_control_message_response():
+    service_id = 42
+    msg = DltMessage.create_control_message(
+        service_id,
+        "Ecu1",
+        b"\02",
+        MessageControlInfo.DLT_CONTROL_RESPONSE,
+        "APP1",
+        "CTX1",
+        12345,
+    )
+    copy = DltMessage.create_from_bytes(msg.to_bytes(), False)
+    assert msg == copy
+    assert (
+        str(msg) == "1.2345 0 Ecu1 APP1 CTX1 control response non-verbose "
+        f"[{service_id}] <2:error>"
+    )
+
+
+def test_control_message_response_unknown():
+    service_id = 42
+    msg = DltMessage.create_control_message(
+        service_id,
+        "Ecu1",
+        b"\04",
+        MessageControlInfo.DLT_CONTROL_RESPONSE,
+        "APP1",
+        "CTX1",
+    )
+    copy = DltMessage.create_from_bytes(msg.to_bytes(), False)
+    assert msg == copy
+    assert (
+        str(msg)
+        == f"0 Ecu1 APP1 CTX1 control response non-verbose [{service_id}] <4:unknown>"
+    )
+
+
+def test_control_message_response_param():
+    service_id = 142
+    msg = DltMessage.create_control_message(
+        service_id,
+        "Ecu",
+        b"\00foo",
+        MessageControlInfo.DLT_CONTROL_RESPONSE,
+        "APP",
+        "CTX",
+        92345,
+    )
+    copy = DltMessage.create_from_bytes(msg.to_bytes(), False)
+    assert msg == copy
+    assert (
+        str(msg) == "9.2345 0 Ecu APP CTX control response non-verbose "
+        f"[{service_id}] <0:ok> 666f6f"
     )
 
 

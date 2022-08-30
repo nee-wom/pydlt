@@ -14,6 +14,7 @@ from pydlt.header import (
     StorageHeader,
 )
 from pydlt.payload import Argument, NonVerbosePayload, Payload, VerbosePayload
+from pydlt.control import ControlResponse
 
 ###############################################################################
 # DLT Message of the DLT protocol
@@ -61,6 +62,12 @@ _MESSAGE_CONTROL_INFO_STR = {
     MessageControlInfo.DLT_CONTROL_TIME: "time",
 }
 
+_CONTROL_RESPONSE_STATUS_STR = {
+    ControlResponse.OK: f"<{ControlResponse.OK}:ok>",
+    ControlResponse.NOT_SUPPORTED: f"<{ControlResponse.NOT_SUPPORTED}:not supported>",
+    ControlResponse.ERROR: f"<{ControlResponse.ERROR}:error>",
+}
+
 
 class DltMessage:
     """A class to handle DLT Message."""
@@ -78,6 +85,7 @@ class DltMessage:
         The following factory methods can be used instead of it:
         - create_non_verbose_message
         - create_verbose_message
+        - create_control_message
         - create_from_bytes
 
         Args:
@@ -90,6 +98,16 @@ class DltMessage:
         self.std_header = std_header
         self.ext_header = ext_header
         self.payload = payload
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return (
+                self.str_header == other.str_header
+                and self.std_header == other.std_header
+                and self.ext_header == other.ext_header
+                and self.payload == other.payload
+            )
+        return False
 
     def __str__(self) -> str:
         """Get overview of the message.
@@ -156,10 +174,24 @@ class DltMessage:
             ret.append("verbose")
         else:
             ret.append("non-verbose")
-        if self.ext_header is not None:
+        if self.ext_header is not None and self.ext_header.verbose:
             ret.append(str(self.ext_header.number_of_arguments))
         if self.payload is not None:
-            ret.append(str(self.payload))
+            ext = self.ext_header
+            if (
+                ext is not None
+                and ext.message_type == MessageType.DLT_TYPE_CONTROL
+                and ext.message_control_info == MessageControlInfo.DLT_CONTROL_RESPONSE
+            ):
+                status = _CONTROL_RESPONSE_STATUS_STR.get(
+                    self.payload.non_static_data[0],
+                    f"<{self.payload.non_static_data[0]}:unknown>",
+                )
+                ret.append(f"[{self.payload.message_id}] {status}")
+                if len(self.payload.non_static_data) > 1:
+                    ret.append(self.payload.non_static_data[1:].hex())
+            else:
+                ret.append(str(self.payload))
         return " ".join(ret)
 
     @classmethod
@@ -210,10 +242,13 @@ class DltMessage:
         msb_first: bool = False,
         str_header: StorageHeader = None,
     ) -> "DltMessage":
-        """Create DltMessage object as Verbose mode.
+        """Create a dlt control message
+
+        Control messages contain an extended header and non-verbose payload
+        (see chapter 7.7.7.1 Control messages in specification)
 
         Returns:
-            DltMessage: DltMessage object as Verbose mode
+            DltMessage: DltMessage object
         """
         payload = VerbosePayload(arguments)
         ext_header = ExtendedHeader(
@@ -221,6 +256,45 @@ class DltMessage:
             message_type,
             message_type_info,
             len(arguments),
+            application_id,
+            context_id,
+        )
+        std_header = cls._create_standard_header(
+            payload.bytes_length,
+            ext_header,
+            timestamp,
+            session_id,
+            ecu_id,
+            message_counter,
+            version_number,
+            msb_first,
+        )
+        return cls(str_header, std_header, ext_header, payload)
+
+    @classmethod
+    def create_control_message(
+        cls,
+        service_id: int,
+        ecu_id: str,
+        parameters: Optional[bytes] = b"",
+        mci: Optional[MessageControlInfo] = MessageControlInfo.DLT_CONTROL_REQUEST,
+        application_id: Optional[str] = "",
+        context_id: Optional[str] = "",
+        timestamp: Optional[int] = None,
+        session_id: Optional[int] = None,
+        message_counter: int = 0,
+        version_number: int = 1,
+        msb_first: bool = False,
+        number_of_arguments: Optional[int] = 0,
+        str_header: StorageHeader = None,
+    ) -> "DltMessage":
+        """Create a control message (Section 7.7.7.1)"""
+        payload = NonVerbosePayload(service_id, parameters, msb_first)
+        ext_header = ExtendedHeader(
+            False,
+            MessageType.DLT_TYPE_CONTROL,
+            mci,
+            number_of_arguments,
             application_id,
             context_id,
         )

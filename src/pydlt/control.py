@@ -45,3 +45,11 @@ class ServiceId(IntEnum):
     CALL_SW_C_INJECTION_BEGIN = 0xFFF
     # service name: CallSW-CInjection has a range: 0xFFF ... 0xFFFFFFFF
     CALL_SW_C_INJECTION_END = 0xFFFFFFFF
+
+
+class ControlResponse(IntEnum):
+    """Response status for control messages"""
+
+    OK = 0
+    NOT_SUPPORTED = 1
+    ERROR = 2
