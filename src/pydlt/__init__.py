@@ -33,3 +33,4 @@ from pydlt.payload import (  # noqa: F401
     VerbosePayload,
 )
 from pydlt.control import ServiceId, ControlResponse  # noqa: F401
+from pydlt.client import DltClient # noqa: F401
