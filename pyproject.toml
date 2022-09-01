@@ -10,12 +10,16 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.6"
+click = ">=8.0"
 
 [tool.poetry.dev-dependencies]
 black = {version = "*", allow-prereleases = true}
 flake8 = "*"
 rope = "*"
 pytest = "*"
+
+[tool.poetry.scripts]
+pydlt = 'pydlt.console:cli'
 
 [tool.isort]
 multi_line_output = 3
