@@ -359,3 +359,23 @@ class DltMessage:
             NonVerbosePayload: Payload as verbose mode
         """
         return cast(VerbosePayload, self.payload)
+
+    @property
+    def ecuid(self) -> str:
+        if self.std_header.ecu_id is not None:
+            return self.std_header.ecu_id
+        elif self.str_header is not None:
+            return self.str_header.ecu_id
+        return ""
+
+    @property
+    def apid(self) -> str:
+        if self.ext_header is not None:
+            return self.ext_header.application_id
+        return ""
+
+    @property
+    def ctid(self) -> str:
+        if self.ext_header is not None:
+            return self.ext_header.context_id
+        return ""
