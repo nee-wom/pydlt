@@ -52,6 +52,22 @@ def test_string_representation():
     )
 
 
+def test_latin1_encoding():
+    msg = DltMessage.create_verbose_message(
+        [ArgumentString("120°C äöü", is_utf8=False, encoding="latin-1")],
+        MessageType.DLT_TYPE_LOG,
+        MessageLogInfo.DLT_LOG_INFO,
+        "Apid",
+        "Ctid",
+        timestamp=93678,  # 9.3678 sec
+        session_id=12345,
+        ecu_id="Ecu",
+        message_counter=119,
+    )
+    copy = msg.create_from_bytes(msg.to_bytes(), False, "latin-1")
+    assert str(copy) == "9.3678 119 Ecu Apid Ctid 12345 log info verbose 1 120°C äöü"
+
+
 def test_message_std_header():
     path = TEST_RESULTS_DIR_PATH / Path(f"{sys._getframe().f_code.co_name}.dlt")
 
@@ -379,6 +395,14 @@ def test_message_verbose_payload_bool():
     dlt_message2 = DltMessage.create_from_bytes(dlt_bytes, True)
     assert cast(ArgumentBool, dlt_message2.verbose_payload.arguments[0]).data is False
     assert cast(ArgumentBool, dlt_message2.verbose_payload.arguments[1]).data is True
+
+
+def test_bool_payload_without_type_length():
+    b1 = ArgumentBool(True)
+    dlt_bytes = bytearray(b1.to_bytes(False))
+    # clear the TypeInfo.TYPE_LENGTH_8BIT flag
+    dlt_bytes[0] = 0x10
+    assert Argument.create_from_bytes(dlt_bytes, False).data is True
 
 
 def test_message_verbose_payload_uint():
